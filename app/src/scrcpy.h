@@ -1,28 +1,23 @@
 #ifndef SCRCPY_H
 #define SCRCPY_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <recorder.h>
+#include "common.h"
 
-struct scrcpy_options {
-    const char *serial;
-    const char *crop;
-    const char *record_filename;
-    enum recorder_format record_format;
-    uint16_t port;
-    uint16_t max_size;
-    uint32_t bit_rate;
-    bool show_touches;
-    bool fullscreen;
-    bool always_on_top;
-    bool control;
-    bool display;
-    bool turn_screen_off;
-    bool render_expired_frames;
+#include <stdbool.h>
+#include "options.h"
+
+enum scrcpy_exit_code {
+    // Normal program termination
+    SCRCPY_EXIT_SUCCESS,
+
+    // No connection could be established
+    SCRCPY_EXIT_FAILURE,
+
+    // Device was disconnected while running
+    SCRCPY_EXIT_DISCONNECTED,
 };
 
-bool
-scrcpy(const struct scrcpy_options *options);
+enum scrcpy_exit_code
+scrcpy(struct scrcpy_options *options);
 
 #endif

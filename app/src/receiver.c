@@ -1,33 +1,51 @@
 #include "receiver.h"
 
-#include <SDL2/SDL_assert.h>
+#include <assert.h>
 #include <SDL2/SDL_clipboard.h>
 
-#include "config.h"
 #include "device_msg.h"
-#include "lock_util.h"
-#include "log.h"
+#include "util/log.h"
 
 bool
-receiver_init(struct receiver *receiver, socket_t control_socket) {
-    if (!(receiver->mutex = SDL_CreateMutex())) {
+receiver_init(struct receiver *receiver, sc_socket control_socket,
+              struct sc_acksync *acksync) {
+    bool ok = sc_mutex_init(&receiver->mutex);
+    if (!ok) {
         return false;
     }
+
     receiver->control_socket = control_socket;
+    receiver->acksync = acksync;
+
     return true;
 }
 
 void
 receiver_destroy(struct receiver *receiver) {
-    SDL_DestroyMutex(receiver->mutex);
+    sc_mutex_destroy(&receiver->mutex);
 }
 
 static void
 process_msg(struct receiver *receiver, struct device_msg *msg) {
     switch (msg->type) {
-        case DEVICE_MSG_TYPE_CLIPBOARD:
+        case DEVICE_MSG_TYPE_CLIPBOARD: {
+            char *current = SDL_GetClipboardText();
+            bool same = current && !strcmp(current, msg->clipboard.text);
+            SDL_free(current);
+            if (same) {
+                LOGD("Computer clipboard unchanged");
+                return;
+            }
+
             LOGI("Device clipboard copied");
             SDL_SetClipboardText(msg->clipboard.text);
+            break;
+        }
+        case DEVICE_MSG_TYPE_ACK_CLIPBOARD:
+            assert(receiver->acksync);
+            LOGD("Ack device clipboard sequence=%" PRIu64_,
+                 msg->ack_clipboard.sequence);
+            sc_acksync_ack(receiver->acksync, msg->ack_clipboard.sequence);
             break;
     }
 }
@@ -49,7 +67,7 @@ process_msgs(struct receiver *receiver, const unsigned char *buf, size_t len) {
         device_msg_destroy(&msg);
 
         head += r;
-        SDL_assert(head <= len);
+        assert(head <= len);
         if (head == len) {
             return head;
         }
@@ -60,28 +78,29 @@ static int
 run_receiver(void *data) {
     struct receiver *receiver = data;
 
-    unsigned char buf[DEVICE_MSG_SERIALIZED_MAX_SIZE];
+    static unsigned char buf[DEVICE_MSG_MAX_SIZE];
     size_t head = 0;
 
     for (;;) {
-        SDL_assert(head < DEVICE_MSG_SERIALIZED_MAX_SIZE);
-        ssize_t r = net_recv(receiver->control_socket, buf,
-                             DEVICE_MSG_SERIALIZED_MAX_SIZE - head);
+        assert(head < DEVICE_MSG_MAX_SIZE);
+        ssize_t r = net_recv(receiver->control_socket, buf + head,
+                             DEVICE_MSG_MAX_SIZE - head);
         if (r <= 0) {
             LOGD("Receiver stopped");
             break;
         }
 
-        ssize_t consumed = process_msgs(receiver, buf, r);
+        head += r;
+        ssize_t consumed = process_msgs(receiver, buf, head);
         if (consumed == -1) {
             // an error occurred
             break;
         }
 
         if (consumed) {
+            head -= consumed;
             // shift the remaining data in the buffer
-            memmove(buf, &buf[consumed], r - consumed);
-            head = r - consumed;
+            memmove(buf, &buf[consumed], head);
         }
     }
 
@@ -92,9 +111,10 @@ bool
 receiver_start(struct receiver *receiver) {
     LOGD("Starting receiver thread");
 
-    receiver->thread = SDL_CreateThread(run_receiver, "receiver", receiver);
-    if (!receiver->thread) {
-        LOGC("Could not start receiver thread");
+    bool ok = sc_thread_create(&receiver->thread, run_receiver,
+                               "scrcpy-receiver", receiver);
+    if (!ok) {
+        LOGE("Could not start receiver thread");
         return false;
     }
 
@@ -103,5 +123,5 @@ receiver_start(struct receiver *receiver) {
 
 void
 receiver_join(struct receiver *receiver) {
-    SDL_WaitThread(receiver->thread, NULL);
+    sc_thread_join(&receiver->thread, NULL);
 }

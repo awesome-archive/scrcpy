@@ -37,6 +37,14 @@ page at http://checkstyle.sourceforge.net/config.html -->
 
   <module name="SuppressWarningsFilter"/>
 
+  <module name="LineLength">
+    <!-- what is a good max value? -->
+    <property name="max" value="150" />
+    <!-- ignore lines like "$File: //depot/... $" -->
+    <property name="ignorePattern" value="\$File.*\$" />
+    <property name="severity" value="info" />
+  </module>
+
   <module name="TreeWalker">
 
     <!-- Checks for Naming Conventions.                  -->
@@ -54,7 +62,7 @@ page at http://checkstyle.sourceforge.net/config.html -->
     <module name="SuppressWarningsHolder"/>
 
     <!-- Checks for imports                              -->
-    <!-- See http://checkstyle.sf.net/config_import.html -->
+    <!-- See http://checkstyle.sf.net/config_imports.html -->
     <module name="AvoidStarImport">
       <property name="allowStaticMemberImports" value="true" />
     </module>
@@ -72,13 +80,6 @@ page at http://checkstyle.sourceforge.net/config.html -->
 
     <!-- Checks for Size Violations.                    -->
     <!-- See http://checkstyle.sf.net/config_sizes.html -->
-    <module name="LineLength">
-      <!-- what is a good max value? -->
-      <property name="max" value="150" />
-      <!-- ignore lines like "$File: //depot/... $" -->
-      <property name="ignorePattern" value="\$File.*\$" />
-      <property name="severity" value="info" />
-    </module>
     <module name="MethodLength" />
     <module name="ParameterNumber">
       <property name="ignoreOverriddenMethods" value="true"/>
@@ -99,7 +100,7 @@ page at http://checkstyle.sourceforge.net/config.html -->
     <module name="WhitespaceAround" />
 
     <!-- Modifier Checks                                    -->
-    <!-- See http://checkstyle.sf.net/config_modifiers.html -->
+    <!-- See http://checkstyle.sf.net/config_modifier.html -->
     <module name="ModifierOrder" />
     <module name="RedundantModifier" />
 
@@ -129,11 +130,6 @@ page at http://checkstyle.sourceforge.net/config.html -->
     </module>
     <module name="IllegalInstantiation" />
     <module name="InnerAssignment" />
-    <module name="MagicNumber">
-      <property name="severity" value="info" />
-      <property name="ignoreHashCodeMethod" value="true" />
-      <property name="ignoreAnnotation" value="true" />
-    </module>
     <module name="MissingSwitchDefault" />
     <module name="SimplifyBooleanExpression" />
     <module name="SimplifyBooleanReturn" />
@@ -157,26 +153,6 @@ page at http://checkstyle.sourceforge.net/config.html -->
     </module>
     <module name="UpperEll" />
 
-    <module name="FileContentsHolder" />
-    <!-- Required by comment suppression filters -->
-
-  </module>
-
-  <module name="SuppressionFilter">
-    <!--<property name="file" value="team-props/checkstyle/checkstyle-suppressions.xml" />-->
-  </module>
-
-  <!-- Enable suppression comments -->
-  <module name="SuppressionCommentFilter">
-    <property name="offCommentFormat" value="CHECKSTYLE IGNORE\s+(\S+)" />
-    <property name="onCommentFormat" value="CHECKSTYLE END IGNORE\s+(\S+)" />
-    <property name="checkFormat" value="$1" />
-  </module>
-  <module name="SuppressWithNearbyCommentFilter">
-    <!-- Syntax is "SUPPRESS CHECKSTYLE name" -->
-    <property name="commentFormat" value="SUPPRESS CHECKSTYLE (\w+)" />
-    <property name="checkFormat" value="$1" />
-    <property name="influenceFormat" value="1" />
   </module>
 
 </module>
